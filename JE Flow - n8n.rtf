@@ -1,0 +1,164 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2759
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+    <meta charset="UTF-8">\
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
+    <title>Formulir Pembuatan Job</title>\
+    <style>\
+        body \{ font-family: Arial, sans-serif; margin: 20px; \}\
+        label \{ display: block; margin-bottom: 5px; font-weight: bold; \}\
+        input[type="text"], select, textarea \{ width: 300px; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; \}\
+        button \{ padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; \}\
+        button:hover \{ background-color: #0056b3; \}\
+        #loadingMessage \{ color: blue; display: none; margin-bottom: 10px; \}\
+        #successMessage \{ color: green; display: none; margin-top: 15px; \}\
+        #errorMessage \{ color: red; display: none; margin-top: 15px; \}\
+    </style>\
+</head>\
+<body>\
+\
+    <h1>Formulir Pembuatan Job</h1>\
+    <p>Pilih job dari daftar yang ada atau masukkan job baru.</p>\
+\
+    <div id="loadingMessage">Memuat daftar job...</div>\
+    <div id="errorMessage">Gagal memuat daftar job. Silakan coba lagi nanti atau masukkan secara manual.</div>\
+\
+    <form id="jobForm">\
+        <label for="jobListDropdown">Pilih Job (jika ada di daftar):</label>\
+        <select id="jobListDropdown" name="selectedJob">\
+            <option value="">-- Pilih --</option>\
+            </select>\
+\
+        <label for="newJobName" style="margin-top: 15px;">Atau Masukkan Nama Job Baru (jika tidak ada di daftar):</label>\
+        <input type="text" id="newJobName" name="newJob" placeholder="Nama job baru">\
+\
+        <label for="notes" style="margin-top: 15px;">Catatan Tambahan (Opsional):</label>\
+        <textarea id="notes" name="notes" rows="4" placeholder="Tulis catatan di sini..."></textarea>\
+\
+        <button type="submit">Kirim Data</button>\
+    </form>\
+\
+    <div id="successMessage">Data berhasil dikirim!</div>\
+\
+    <script>\
+        // *** PENTING: GANTI DENGAN URL WEBHOOK N8N ANDA UNTUK MENGAMBIL DATA DROPDOWN JOB ***\
+        const N8N_JOB_DROPDOWN_WEBHOOK_URL = 'https://mufidahamaliyah.app.n8n.cloud/webhook/8c60817a-743f-4c96-a50e-65a17e1c562e';\
+\
+        // *** PENTING: GANTI DENGAN URL WEBHOOK N8N ANDA UNTUK MENGIRIM DATA FORMULIR ***\
+        const N8N_SUBMIT_WEBHOOK_URL = 'https://mufidahamaliyah.app.n8n.cloud/webhook/23ac7666-2ab8-402a-80bd-ceb83c3ca681';\
+\
+        const jobListDropdown = document.getElementById('jobListDropdown');\
+        const newJobNameInput = document.getElementById('newJobName');\
+        const jobForm = document.getElementById('jobForm');\
+        const loadingMessage = document.getElementById('loadingMessage');\
+        const successMessage = document.getElementById('successMessage');\
+        const errorMessage = document.getElementById('errorMessage');\
+\
+        // Fungsi untuk mengambil data dropdown Job dari n8n\
+        async function fetchJobDropdownData() \{\
+            loadingMessage.style.display = 'block';\
+            errorMessage.style.display = 'none';\
+            try \{\
+                const response = await fetch(N8N_JOB_DROPDOWN_WEBHOOK_URL);\
+                if (!response.ok) \{\
+                    throw new Error(`HTTP error! status: $\{response.status\}`);\
+                \}\
+                const data = await response.json();\
+                \
+                // Bersihkan opsi lama sebelum menambahkan yang baru\
+                jobListDropdown.innerHTML = '<option value="">-- Pilih --</option>';\
+                data.forEach(item => \{\
+                    const option = document.createElement('option');\
+                    option.value = item.value;\
+                    option.textContent = item.label;\
+                    jobListDropdown.appendChild(option);\
+                \});\
+                loadingMessage.style.display = 'none';\
+            \} catch (error) \{\
+                console.error("Gagal memuat data dropdown job:", error);\
+                loadingMessage.style.display = 'none';\
+                errorMessage.style.display = 'block';\
+            \}\
+        \}\
+\
+        // Panggil fungsi saat halaman dimuat\
+        document.addEventListener('DOMContentLoaded', fetchJobDropdownData);\
+\
+        // Event listener untuk validasi input Job\
+        jobListDropdown.addEventListener('change', function() \{\
+            if (this.value !== '') \{\
+                newJobNameInput.value = '';\
+                newJobNameInput.disabled = true;\
+            \} else \{\
+                newJobNameInput.disabled = false;\
+            \}\
+        \});\
+\
+        newJobNameInput.addEventListener('input', function() \{\
+            if (this.value !== '') \{\
+                jobListDropdown.value = '';\
+                jobListDropdown.disabled = true;\
+            \} else \{\
+                jobListDropdown.disabled = false;\
+            \}\
+        \});\
+\
+        // Event listener untuk submit formulir\
+        jobForm.addEventListener('submit', async function(event) \{\
+            event.preventDefault();\
+\
+            const selectedJob = jobListDropdown.value;\
+            const newJob = newJobNameInput.value.trim();\
+            const notes = document.getElementById('notes').value.trim();\
+\
+            // Validasi: Harus pilih job ATAU isi job baru\
+            if (!selectedJob && !newJob) \{\
+                alert('Anda harus memilih job dari daftar ATAU memasukkan nama job baru.');\
+                return;\
+            \}\
+\
+            const formData = \{\
+                selectedJob: selectedJob,\
+                newJob: newJob,\
+                notes: notes,\
+            \};\
+\
+            try \{\
+                const response = await fetch(N8N_SUBMIT_WEBHOOK_URL, \{\
+                    method: 'POST',\
+                    headers: \{\
+                        'Content-Type': 'application/json',\
+                    \},\
+                    body: JSON.stringify(formData),\
+                \});\
+\
+                if (response.ok) \{\
+                    jobForm.reset();\
+                    jobListDropdown.disabled = false;\
+                    newJobNameInput.disabled = false;\
+                    successMessage.style.display = 'block';\
+                    errorMessage.style.display = 'none';\
+                    setTimeout(() => successMessage.style.display = 'none', 3000);\
+                    await fetchJobDropdownData(); // Muat ulang dropdown job jika ada penambahan data baru\
+                \} else \{\
+                    errorMessage.textContent = 'Gagal mengirim data. Silakan coba lagi.';\
+                    errorMessage.style.display = 'block';\
+                    successMessage.style.display = 'none';\
+                \}\
+            \} catch (error) \{\
+                console.error('Terjadi kesalahan:', error);\
+                errorMessage.textContent = 'Terjadi kesalahan jaringan atau server. Silakan coba lagi.';\
+                errorMessage.style.display = 'block';\
+                successMessage.style.display = 'none';\
+            \}\
+        \});\
+    </script>\
+</body>\
+</html>}
